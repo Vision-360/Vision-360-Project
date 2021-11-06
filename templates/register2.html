@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block head %}
+
+<script type="text/javascript" src="{{ url_for('static', filename='styleforvalidate.css') }}"></script>
+{% endblock %}
+
+{% block body %}
+  
+    <div class="contain">
+        <form id="signup" class="form" action="{{ url_for('register') }}" method="post">
+          <p>Welcome</p>
+          <div class="msg" style="color: azure;">{{ msg }}</div>
+            <div class="form-field">
+              <input type="username" name="username" id="username" autocomplete="off" placeholder="Name"><br>
+              <small style="color: azure;"></small>
+            </div>
+            <div class="form-field">
+              <input type="email" name="email" id="email" autocomplete="off" placeholder="Email"><br>
+              <small style="color: azure;"></small>
+            </div>
+            <!-- <div class="form-field">
+              <input type="text" name="city" id="city" placeholder="City"><br>
+              <small style="color: azure;"></small>
+            </div> -->
+            <div class="form-field">
+              <input type="password" name="password" id="password" autocomplete="off" placeholder="Password"><br>
+              <small style="color: azure;"></small>
+            </div>
+            <div class="form-field">
+              <input type="password"  name="confirm-password" id="confirm-password" autocomplete="off" placeholder="Confirm Password"><br>
+              <small style="color: azure;"></small>
+            </div>
+            <div class="form-field">
+              <input  type="submit" value="Sign Up"><br>
+            </div>
+          <a href="{{ url_for('login') }}">Already a user? Sign In</a>
+        </form>
+    
+      </div>
+
+      <script type="text/javascript" src="{{ url_for('static', filename='validate.js') }}"></script>
+
+{% endblock %}

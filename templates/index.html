@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block head %}
+
+
+{% endblock %}
+
+{% block body %}
+
+<div class="contain">
+
+  <h1 style="font-size:8vw; color:azure; text-align: center; ">VISION 360</h1>
+
+      <div class="spaceimages">
+        <a href="{{ url_for('video') }}">
+          <img src="{{ url_for('static', filename='icons8-running-100 (1).png') }}"/>
+        </a>
+        <a href="{{ url_for('video2') }}">
+          <img src="{{ url_for('static', filename='icons8-face-100 (1).png') }}"/>
+        </a>
+        <a href="{{ url_for('video3') }}">
+          <img src="{{ url_for('static', filename='icons8-emotion-128 (1).png') }}"/>
+        </a>
+        <a href="{{ url_for('video4') }}">
+          <img src="{{ url_for('static', filename='icons8-activity-100 (1).png') }}"/>
+        </a>
+        <a href="{{ url_for('video5') }}">
+          <img src="{{ url_for('static', filename='icons8-fire-100 (1).png') }}"/>
+        </a>
+      </div>
+
+</div>
+
+{% endblock %}
