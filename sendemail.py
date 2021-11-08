@@ -21,6 +21,6 @@ def SendMail(ImgFileName):
     s.ehlo()
     s.starttls()
     s.ehlo()
-    s.login("shubhi.coolio21@gmail.com", "pleasefacebook")
-    s.sendmail("shubhi.coolio21@gmail.com", "ananyagupta.bt19cse@pec.edu.in", msg.as_string())
+    s.login("insert_sender_email", "insert_sender_password")
+    s.sendmail("insert_sender_email", "insert_receiver_email", msg.as_string())
     s.quit()
