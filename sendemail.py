@@ -9,8 +9,8 @@ def SendMail(ImgFileName):
     img_data = open(ImgFileName, 'rb').read()
     msg = MIMEMultipart()
     msg['Subject'] = 'Security Alert'
-    msg['From'] = 'shubhi.coolio21@gmail.com.cc'
-    msg['To'] = 'ananyagupta.bt19cse@pec.edu.in.cc'
+    msg['From'] = 'insert_sender_email.cc'
+    msg['To'] = 'insert_receiver_email.cc'
 
     text = MIMEText("Alert Message. Review the frame and contact authorities")
     msg.attach(text)
