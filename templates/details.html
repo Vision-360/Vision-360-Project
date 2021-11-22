@@ -1,33 +1,53 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Vision 360</title>
-  <meta name="description" content="particles.js is a lightweight JavaScript library for creating particles.">
-  <meta name="author" content="Vincent Garreau" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link rel="icon" href="{{ url_for('static', filename='eye.png') }}" type="image/gif">
-  <link rel="stylesheet" media="screen" href="{{ url_for('static', filename='style.css') }}">
-  <!-- <link rel="stylesheet" media="screen" href="{{ url_for('static', filename='style2.css') }}"> -->
-  
-  <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet"> 
-</head>
-<body>
+{% extends 'base.html' %}
 
-    <div class="text">
-        
-    </div>
-
-<!-- particles.js container -->
-
-<div id="particles-js"></div>
+{% block head %}
 
 
-<!-- scripts -->
-<script type="text/javascript" src="{{ url_for('static', filename='particles.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}
 
+{% block body %}
 
-</body>
-</html>
+<div class="contain">
+
+      <div class="spaceimages">
+        <div style="width: 300px;" class="motion">
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">Motion Log</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_motion_1}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_motion_2}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_motion_3}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_motion_4}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_motion_5}}</p><br>
+        </div>
+        <div style="width: 300px;" class="face">
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">Facial Recognition Log</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_face_1}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_face_2}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_face_3}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_face_4}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_face_5}}</p><br>
+        </div>
+        <div style="width: 300px;" class="emotion">
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">Emotion Log</p><br>
+          <!-- <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_motion}}</p> -->
+        </div>
+        <div style="width: 300px;" class="act">
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">Activity Log</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_act_1}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_act_2}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_act_3}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_act_4}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_act_5}}</p><br>
+        </div>
+        <div style="width: 300px;" class="fire">
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">Fire Log</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_fire_1}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_fire_2}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_fire_3}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_fire_4}}</p><br>
+          <p style="font: size 2vw; color:azure; text-align: center; font-family: Montserrat, sans-serif;">{{str_fire_5}}</p><br>
+        </div>
+      </div>
+
+</div>
+
+{% endblock %}
