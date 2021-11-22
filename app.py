@@ -14,13 +14,23 @@ import pafy
 import youtube_dl
 import pickle
 import pyrebase
-import datetime
+from datetime import datetime
 import pandas as pd
+from imutils import paths
+import sendemail
 
 app=Flask(__name__)
-cap=cv2.VideoCapture(0)
+# cap=cv2.VideoCapture(0)
 
 app.secret_key = 'verysecret'
+
+@app.after_request
+def add_header(response):
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Expires'] = '0'
+    response.cache_control.max_age = 0
+    return response
 
 #Add your own details
 config = {
@@ -42,26 +52,68 @@ db = firebase.database()
 #Initialze person as dictionary
 person = {"is_logged_in": False, "name": "", "email": "", "uid": ""}
 
-def generate_frames():
-    while True:
-            
-        ## read the camera frame
-        success,frame=cap.read()
-        if not success:
-            break
-        else:
-            ret,buffer=cv2.imencode('.jpg',frame)
-            frame=buffer.tobytes()
+def encode():
+    #get paths of each file in folder named Images
+    #Images here contains my data(folders of various persons)
+    imagePaths = list(paths.list_images('known_faces'))
+    knownEncodings = []
+    knownNames = []
+    # loop over the image paths
+    for (i, imagePath) in enumerate(imagePaths):
+        # extract the person name from the image path
+        name = imagePath.split(os.path.sep)[-2]
+        # load the input image and convert it from BGR (OpenCV ordering)
+        # to dlib ordering (RGB)
+        image = cv2.imread(imagePath)
+        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        #Use Face_recognition to locate faces
+        boxes = face_recognition.face_locations(rgb,model='hog')
+        # compute the facial embedding for the face
+        encodings = face_recognition.face_encodings(rgb, boxes)
+        # loop over the encodings
+        for encoding in encodings:
+            knownEncodings.append(encoding)
+            knownNames.append(name)
+    #save emcodings along with their names in dictionary data
+    data = {"encodings": knownEncodings, "names": knownNames}
+    #use pickle to save data into a file for later use
+    f = open("face_enc", "wb")
+    f.write(pickle.dumps(data))
+    f.close()
 
-        yield(b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+# def generate_frames():
+#     while True:
+            
+#         ## read the camera frame
+#         success,frame=cap.read()
+#         if not success:
+#             break
+#         else:
+#             ret,buffer=cv2.imencode('.jpg',frame)
+#             frame=buffer.tobytes()
+
+#         yield(b'--frame\r\n'
+#                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+def log_motion():
+    i=0
+    with open('log/motion.csv','r+') as f:
+        myDataList = f.readlines()
+        # print(myDataList[-1][16:])
+        now = datetime.now()
+        dtString = now.strftime('%H:%M:%S, %d/%m/%Y')
+        if myDataList[-1][16:]==dtString:
+            return
+        f.writelines(f'\n{"Motion Detected"},{dtString}')
 
 def gen_motion():
     # frame_width = int( cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     # frame_height =int( cap.get( cv2.CAP_PROP_FRAME_HEIGHT))
     # fourcc = cv2.VideoWriter_fourcc('X','V','I','D')
     # out = cv2.VideoWriter("output.avi", fourcc, 5.0, (1280,720))
-    cap=cv2.VideoCapture('videos/Ground_Floor.mp4')
+    flag=0
+    # cap=cv2.VideoCapture('videos/Ground_Floor.mp4')
+    cap=cv2.VideoCapture('rtsp://admin:om11072004@192.168.29.220:554/cam/realmonitor?channel=3&subtype=0')
     ret, frame1 = cap.read()
     ret, frame2 = cap.read()
     while cap.isOpened():
@@ -75,11 +127,19 @@ def gen_motion():
         for contour in contours:
             (x, y, w, h) = cv2.boundingRect(contour)
 
-            if cv2.contourArea(contour) < 3000:
+            if cv2.contourArea(contour) < 3200:
+                # flag=0
                 continue
+            flag+=1
+            log_motion()
             cv2.rectangle(frame1, (x, y), (x+w, y+h), (0, 255, 0), 2)
-            cv2.putText(frame1, "Status: {}".format('Movement'), (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
-                        1, (0, 0, 255), 3)
+            cv2.putText(frame1, "Status: {}".format('Movement'), (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
+                        1.5, (0, 0, 255), 2)
+            if flag==10:
+                print("why")
+                # cv2.imwrite('motion_alert.jpg',frame1)
+                # sendemail.SendMail('motion_alert.jpg')
+                flag=13
         #cv2.drawContours(frame1, contours, -1, (0, 255, 0), 2)
 
         image = cv2.resize(frame1, (1280,720))
@@ -188,6 +248,16 @@ def gen_motion():
 #         # cv2.waitKey(0)
 #         # cv2.destroyWindow(filename)
 
+def log_face(name):
+    with open('log/face.csv','r+') as f:
+        myDataList = f.readlines()
+        # print(myDataList[-1][16:])
+        now = datetime.now()
+        dtString = now.strftime('%H:%M:%S, %d/%m/%Y')
+        # if myDataList[-1][16:]==dtString:
+        #     return
+        f.writelines(f'\n{name},{dtString}')
+
 def gen_face():
     faceCascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt2.xml')
     # load the known faces and embeddings saved in last file
@@ -195,6 +265,7 @@ def gen_face():
     
     print("Streaming started")
     video_capture = cv2.VideoCapture(0)
+    # video_capture = cv2.VideoCapture('http://192.168.29.248:4747/mjpegfeed')
     # loop over frames from the video file stream
     while True:
         # grab the frame from the threaded video stream
@@ -244,6 +315,7 @@ def gen_face():
     
             # update the list of names
             names.append(name)
+            log_face(name)
             # loop over the recognized faces
             for ((x, y, w, h), name) in zip(faces, names):
                 # rescale the face coordinates
@@ -262,6 +334,7 @@ def gen_face():
 def gen_emotion():
     faceCascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     cap = cv2.VideoCapture(0)
+    # cap = cv2.VideoCapture('http://192.168.29.248:4747/mjpegfeed')
     while True:
         ret, frame = cap.read() ## read one image from a video
 
@@ -291,6 +364,16 @@ def gen_emotion():
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
+def log_activity(label):
+    with open('log/activity.csv','r+') as f:
+        myDataList = f.readlines()
+        # print(myDataList[-1][16:])
+        now = datetime.now()
+        dtString = now.strftime('%H:%M:%S, %d/%m/%Y')
+        # if myDataList[-1][16:]==dtString:
+        #     return
+        f.writelines(f'\n{label},{dtString}')
+
 def gen_activity():
     CLASSES = open("action_recognition_kinetics.txt").read().strip().split("\n")
     SAMPLE_DURATION = 16
@@ -303,6 +386,7 @@ def gen_activity():
     # vs = cv2.VideoCapture('20211017181851.mp4')
     # vs = cv2.VideoCapture('Cam4.mp4')
     vs = cv2.VideoCapture(0)
+    # vs = cv2.VideoCapture('http://192.168.29.248:4747/mjpegfeed')
 
     while True:
         
@@ -330,7 +414,14 @@ def gen_activity():
         
         net.setInput(blob)
         outputs = net.forward()
-        label = CLASSES[np.argmax(outputs)]
+        # label = CLASSES[np.argmax(outputs)]
+        print(outputs[0][np.argmax(outputs)],CLASSES[np.argmax(outputs)])
+        if outputs[0][np.argmax(outputs)]>6.85:
+            label = CLASSES[np.argmax(outputs)]
+        else:
+            label='unknown'
+        
+        log_activity(label)
 
         for frame in frames:
             cv2.rectangle(frame, (0, 0), (300, 40), (0, 0, 0), -1)
@@ -349,11 +440,22 @@ def gen_activity():
             # if key == ord("q"):
             #     break
 
+def log_fire():
+    with open('log/fire.csv','r+') as f:
+        myDataList = f.readlines()
+        # print(myDataList[-1][16:])
+        now = datetime.now()
+        dtString = now.strftime('%H:%M:%S, %d/%m/%Y')
+        # if myDataList[-1][16:]==dtString:
+        #     return
+        f.writelines(f'\n{"Fire Detected"},{dtString}')
+
 def gen_fire():
     model = tf.keras.models.load_model('InceptionV3.h5')
+    f=0
     # cap=cv2.VideoCapture('20211017181851.mp4')
     # cap=cv2.VideoCapture('Cam4.mp4')
-    cap=cv2.VideoCapture('videos/fire.mp4')
+    cap=cv2.VideoCapture('videos/fire_cut.mp4')
     # url= "https://www.youtube.com/watch?v=whlymAuRtzU"
     # video = pafy.new(url)
     # best = video.getbest(preftype="mp4")
@@ -375,9 +477,15 @@ def gen_fire():
         prediction = np.argmax(probabilities)
         #if prediction is 0, which means there is fire in the frame.
         if prediction == 0:
+                log_fire()
                 cv2.rectangle(frame, (0, 0), (300, 40), (0, 0, 0), -1)
-                cv2.putText(frame, 'FIRE DETECTED', (10, 25), cv2.FONT_HERSHEY_SIMPLEX,0.8, (255, 255, 255), 2)
+                cv2.putText(frame, 'FIRE DETECTED', (10, 25), cv2.FONT_HERSHEY_SIMPLEX,0.8, (255, 255, 255), 3)
                 print(probabilities[prediction])
+                f=f+1
+                if f==12:
+                    cv2.imwrite('fire_alert.jpg',frame)
+                    sendemail.SendMail('fire_alert.jpg')
+                    flag=13
         ima = cv2.resize(frame, (1280,720))
 
         ret, jpeg = cv2.imencode('.jpg', ima)
@@ -388,7 +496,7 @@ def gen_fire():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index2.html')
 
 @app.route('/video')
 def video():
@@ -410,6 +518,10 @@ def video4():
 def video5():
     return render_template('video5.html')
 
+@app.route('/dashboard')
+def dashboard():
+    return render_template('index.html')
+
 @app.route('/login', methods = ["POST", "GET"])
 def login():
     msg=''
@@ -427,15 +539,20 @@ def login():
                 return render_template('login.html',msg=msg)
             print("Successful!")
             #Insert the user data in the global person
-            global person
-            person["is_logged_in"] = True
-            person["email"] = user["email"]
-            person["uid"] = user["localId"]
+            # global person
+            # person["is_logged_in"] = True
+            # person["email"] = user["email"]
+            # person["uid"] = user["localId"]
+            session['loggedin'] = True
+            session['uid'] = user['localId']
+            session['email'] = user['email']
             #Get the name of the user
             data = db.child("users").get()
-            person["name"] = data.val()[person["uid"]]["name"]
+            session['name'] = data.val()[session["uid"]]["name"]
             #Redirect to welcome page
-            return render_template('index.html')
+            if session:
+                # return render_template('index.html')
+                return redirect(url_for('dashboard'))
         except:
             #If there is any error, redirect back to login
             msg="Invalid Email or Password"
@@ -490,14 +607,14 @@ def register():
             #Login the user
             # user = auth.sign_in_with_email_and_password(email, password)
             #Add data to global person
-            global person
-            person["is_logged_in"] = True
-            person["email"] = user["email"]
-            person["uid"] = user["localId"]
-            person["name"] = name
+            # global person
+            # person["is_logged_in"] = True
+            # person["email"] = user["email"]
+            # person["uid"] = user["localId"]
+            # person["name"] = name
             # Append data to the firebase realtime database
             data = {"name": name, "email": email}
-            db.child("users").child(person["uid"]).set(data)
+            db.child("users").child(user["localId"]).set(data)
             #Go to welcome page
             # return redirect(url_for('register'), msg="Please go to your email for verification")
             # return redirect(url_for('register'))
@@ -520,10 +637,48 @@ def register():
 
 @app.route('/details')
 def details():
-    filename = 'motion.csv'
-    data = pd.read_csv(filename, header=0)
-    myData = list(data.values)
-    return render_template('details.html', myData=myData)
+    data = pd.read_csv('log/motion.csv', header=0)
+    data_face=pd.read_csv('log/face.csv', header=0)
+    data_act=pd.read_csv('log/activity.csv', header=0)
+    data_fire=pd.read_csv('log/fire.csv', header=0)
+    # myData = list(data.values)
+    m1=str(data.tail(5).iloc[4][2])+" "+str(data.tail(5).iloc[4][1])+" "+str(data.tail(5).iloc[4][0])
+    m2=str(data.tail(5).iloc[3][2])+" "+str(data.tail(5).iloc[3][1])+" "+str(data.tail(5).iloc[3][0])
+    m3=str(data.tail(5).iloc[2][2])+" "+str(data.tail(5).iloc[2][1])+" "+str(data.tail(5).iloc[2][0])
+    m4=str(data.tail(5).iloc[1][2])+" "+str(data.tail(5).iloc[1][1])+" "+str(data.tail(5).iloc[1][0])
+    m5=str(data.tail(5).iloc[0][2])+" "+str(data.tail(5).iloc[0][1])+" "+str(data.tail(5).iloc[0][0])
+
+    fa1=str(data_face.tail(5).iloc[4][2])+" "+str(data_face.tail(5).iloc[4][1])+" "+str(data_face.tail(5).iloc[4][0])
+    fa2=str(data_face.tail(5).iloc[3][2])+" "+str(data_face.tail(5).iloc[3][1])+" "+str(data_face.tail(5).iloc[3][0])
+    fa3=str(data_face.tail(5).iloc[2][2])+" "+str(data_face.tail(5).iloc[2][1])+" "+str(data_face.tail(5).iloc[2][0])
+    fa4=str(data_face.tail(5).iloc[1][2])+" "+str(data_face.tail(5).iloc[1][1])+" "+str(data_face.tail(5).iloc[1][0])
+    fa5=str(data_face.tail(5).iloc[0][2])+" "+str(data_face.tail(5).iloc[0][1])+" "+str(data_face.tail(5).iloc[0][0])
+
+    a1=str(data_act.tail(5).iloc[4][2])+" "+str(data_act.tail(5).iloc[4][1])+" "+str(data_act.tail(5).iloc[4][0])
+    a2=str(data_act.tail(5).iloc[3][2])+" "+str(data_act.tail(5).iloc[3][1])+" "+str(data_act.tail(5).iloc[3][0])
+    a3=str(data_act.tail(5).iloc[2][2])+" "+str(data_act.tail(5).iloc[2][1])+" "+str(data_act.tail(5).iloc[2][0])
+    a4=str(data_act.tail(5).iloc[1][2])+" "+str(data_act.tail(5).iloc[1][1])+" "+str(data_act.tail(5).iloc[1][0])
+    a5=str(data_act.tail(5).iloc[0][2])+" "+str(data_act.tail(5).iloc[0][1])+" "+str(data_act.tail(5).iloc[0][0])
+
+    f1=str(data_fire.tail(5).iloc[4][2])+" "+str(data_fire.tail(5).iloc[4][1])+" "+str(data_fire.tail(5).iloc[4][0])
+    f2=str(data_fire.tail(5).iloc[3][2])+" "+str(data_fire.tail(5).iloc[3][1])+" "+str(data_fire.tail(5).iloc[3][0])
+    f3=str(data_fire.tail(5).iloc[2][2])+" "+str(data_fire.tail(5).iloc[2][1])+" "+str(data_fire.tail(5).iloc[2][0])
+    f4=str(data_fire.tail(5).iloc[1][2])+" "+str(data_fire.tail(5).iloc[1][1])+" "+str(data_fire.tail(5).iloc[1][0])
+    f5=str(data_fire.tail(5).iloc[0][2])+" "+str(data_fire.tail(5).iloc[0][1])+" "+str(data_fire.tail(5).iloc[0][0])
+
+    return render_template('details.html', str_motion_1=m1, str_motion_2=m2, str_motion_3=m3, str_motion_4=m4, str_motion_5=m5,
+                                           str_face_1=fa1, str_face_2=fa2, str_face_3=fa3, str_face_4=fa4, str_face_5=fa5,
+                                           str_act_1=a1, str_act_2=a2, str_act_3=a3, str_act_4=a4, str_act_5=a5,
+                                           str_fire_1=f1, str_fire_2=f2, str_fire_3=f3, str_fire_4=f4, str_fire_5=f5)
+
+
+@app.route('/contactus')
+def contactus():
+    return render_template('contactus.html')
+
+@app.route('/aboutus')
+def aboutus():
+    return render_template('aboutus.html')
 
 if __name__=="__main__":
     app.run(debug=True)
